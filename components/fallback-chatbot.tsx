@@ -8,11 +8,22 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar } from "@/components/ui/avatar"
-import { Loader2, Send, User, Bot } from "lucide-react"
-import { chatWithMedicalAI, type Message } from "@/app/actions/chat-action"
-import { useToast } from "@/hooks/use-toast"
+import { Send, User, Bot } from "lucide-react"
 
-export function MedicalChatbot() {
+type Message = {
+  role: "user" | "assistant"
+  content: string
+}
+
+const FALLBACK_RESPONSES = [
+  "I'm a medical assistant that can provide general health information. How can I help you today?",
+  "That's an interesting question. In general, it's best to consult with your healthcare provider for personalized advice.",
+  "I understand your concern. Many people have questions about this topic. Remember that general information is not a substitute for professional medical advice.",
+  "Thank you for sharing that information. It's important to discuss these symptoms with your doctor for proper evaluation.",
+  "I'm here to provide general health information, but I can't diagnose conditions or prescribe treatments. Please consult with a healthcare professional.",
+]
+
+export function FallbackChatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -20,9 +31,7 @@ export function MedicalChatbot() {
     },
   ])
   const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const { toast } = useToast()
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -32,7 +41,7 @@ export function MedicalChatbot() {
     }
   }, [messages])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!input.trim()) return
@@ -42,38 +51,19 @@ export function MedicalChatbot() {
       content: input,
     }
 
-    // Update UI immediately with user message
+    // Update UI with user message
     setMessages((prev) => [...prev, userMessage])
     setInput("")
-    setIsLoading(true)
 
-    try {
-      // Send to server action with all conversation history
-      const conversationHistory = [...messages, userMessage]
-      const response = await chatWithMedicalAI(conversationHistory)
-
-      // Update with AI response
-      setMessages((prev) => [...prev, response])
-    } catch (error) {
-      console.error("Chat error:", error)
-      toast({
-        title: "Error",
-        description: "Failed to get a response. Please try again.",
-        variant: "destructive",
-      })
-
-      // Add a fallback response in case of error
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists.",
-        },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
+    // Simulate AI response with a random fallback message
+    setTimeout(() => {
+      const randomIndex = Math.floor(Math.random() * FALLBACK_RESPONSES.length)
+      const botResponse: Message = {
+        role: "assistant",
+        content: FALLBACK_RESPONSES[randomIndex],
+      }
+      setMessages((prev) => [...prev, botResponse])
+    }, 1000)
   }
 
   return (
@@ -114,20 +104,6 @@ export function MedicalChatbot() {
                 </div>
               </div>
             ))}
-
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="flex items-start gap-3 max-w-[80%]">
-                  <Avatar className="h-8 w-8 bg-primary/10">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </Avatar>
-                  <div className="rounded-lg px-4 py-2 text-sm bg-muted flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Thinking...
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </ScrollArea>
       </CardContent>
@@ -138,11 +114,10 @@ export function MedicalChatbot() {
             placeholder="Type your medical question..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            disabled={isLoading}
             className="flex-1"
           />
-          <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          <Button type="submit" size="icon" disabled={!input.trim()}>
+            <Send className="h-4 w-4" />
           </Button>
         </form>
       </CardFooter>

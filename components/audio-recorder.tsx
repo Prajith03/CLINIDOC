@@ -20,9 +20,10 @@ interface TranscriptionResult {
 
 interface AudioRecorderProps {
   onTranscriptionComplete?: (result: TranscriptionResult) => void
+  onStartTranscription?: () => void
 }
 
-export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
+export function AudioRecorder({ onTranscriptionComplete, onStartTranscription }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
@@ -33,8 +34,18 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
 
   const startRecording = async () => {
     try {
-      // For preview environment, skip actual recording and just simulate
-      // This avoids issues with blob URLs and media access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.start()
       setIsRecording(true)
       setRecordingTime(0)
 
@@ -42,27 +53,60 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
         setRecordingTime((prev) => prev + 1)
       }, 1000)
     } catch (error) {
-      console.error("Error in recording:", error)
+      console.error("Error accessing microphone:", error)
       toast({
-        title: "Recording Error",
-        description: "Could not start recording. Please try again.",
+        title: "Microphone Error",
+        description: "Could not access your microphone. Please check permissions.",
         variant: "destructive",
       })
     }
   }
 
   const stopRecording = async () => {
+    if (!mediaRecorderRef.current) return
+
+    mediaRecorderRef.current.stop()
     if (timerRef.current) clearInterval(timerRef.current)
     setIsRecording(false)
     setIsProcessing(true)
 
-    try {
-      // Simulate processing time
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+    // Notify parent component to show loading state
+    if (onStartTranscription) {
+      onStartTranscription()
+    }
 
-      // Call the transcription action directly without actual audio data
-      // This avoids issues with blob URLs in the preview environment
-      const result = await transcribeAudio(new FormData())
+    // Wait for the final dataavailable event
+    await new Promise<void>((resolve) => {
+      if (!mediaRecorderRef.current) {
+        resolve()
+        return
+      }
+
+      mediaRecorderRef.current.onstop = () => {
+        resolve()
+      }
+    })
+
+    try {
+      // Ensure we have audio data
+      if (audioChunksRef.current.length === 0) {
+        throw new Error("No audio data recorded")
+      }
+
+      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+
+      // Debug: Log the audio blob size
+      console.log("Audio blob size:", audioBlob.size, "bytes")
+
+      if (audioBlob.size < 100) {
+        throw new Error("Audio recording too short or empty")
+      }
+
+      const formData = new FormData()
+      formData.append("audio", audioBlob, "recording.webm")
+
+      const result = await transcribeAudio(formData)
+      console.log("Transcription result:", result)
 
       toast({
         title: "Transcription Complete",
@@ -80,8 +124,26 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
         description: error instanceof Error ? error.message : "There was an error processing your audio.",
         variant: "destructive",
       })
+
+      // Reset loading state in case of error
+      if (onTranscriptionComplete) {
+        onTranscriptionComplete({
+          transcript: "Error processing audio.",
+          soapNotes: {
+            subjective: "Error processing audio.",
+            objective: "Error processing audio.",
+            assessment: "Error processing audio.",
+            plan: "Error processing audio.",
+          },
+        })
+      }
     } finally {
       setIsProcessing(false)
+
+      // Stop all tracks in the stream to release the microphone
+      if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
+      }
     }
   }
 
@@ -118,7 +180,7 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
       {isProcessing && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Transcribing your audio...
+          Processing audio...
         </div>
       )}
     </div>

@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Stethoscope, User, Lightbulb, MessageSquare } from "lucide-react"
 
@@ -22,6 +21,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           <Stethoscope className="h-6 w-6 text-primary" />
           <span className="text-xl font-bold">Clinidoc</span>
+          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"> </span>
         </div>
 
         <nav className="flex items-center gap-6">
@@ -41,9 +41,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <ModeToggle />
-          <Button variant="outline" size="sm">
-            Sign In
-          </Button>
+          <span className="text-sm text-muted-foreground">Dr. Sarah Johnson</span>
         </div>
       </div>
     </header>

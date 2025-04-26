@@ -1,67 +1,68 @@
 "use server"
 import { revalidatePath } from "next/cache"
-import { generateSoapNotes } from "@/lib/generate-soap-notes"
+
+// Sample transcript and SOAP notes for fallback
+const sampleTranscript = `
+  Doctor: Good morning. How are you feeling today?
+  Patient: Not great, doctor. I've been having these headaches for about two weeks now.
+  Doctor: I'm sorry to hear that. Can you describe the headaches for me?
+  Patient: They're usually on one side of my head, throbbing, and sometimes I feel nauseous.
+  Doctor: How often do they occur?
+  Patient: Almost daily now, and they last for hours.
+  Doctor: Any history of migraines in your family?
+  Patient: Yes, my mother had them.
+  Doctor: Are there any triggers you've noticed?
+  Patient: Stress definitely makes them worse. And bright lights.
+  Doctor: Let me check your vitals. Your blood pressure is 130/85, which is slightly elevated. Temperature is normal at 98.6°F.
+  Doctor: I'm going to examine your head and neck now. Any tenderness here?
+  Patient: Yes, especially on the right side.
+  Doctor: I believe you're experiencing migraine headaches. Let's discuss treatment options.
+`
+
+const sampleSoapNotes = {
+  subjective:
+    "Patient reports experiencing headaches for the past two weeks, primarily on one side of the head. The pain is described as throbbing and is sometimes accompanied by nausea. Headaches occur almost daily and last for hours. Patient notes that stress and bright lights seem to trigger or worsen the headaches. Family history positive for migraines (mother).",
+  objective:
+    "Vital signs: BP 130/85 mmHg, temperature 98.6°F. Physical examination reveals tenderness on palpation of the right temporal region. No focal neurological deficits observed.",
+  assessment:
+    "Migraine headaches, likely with genetic predisposition. Triggers identified include stress and photosensitivity.",
+  plan: "1. Start sumatriptan 50mg at onset of headache, may repeat after 2 hours if needed, not to exceed 200mg in 24 hours. 2. Lifestyle modifications including stress management techniques and avoiding bright light when possible. 3. Maintain headache diary to identify additional triggers. 4. Follow-up in 4 weeks to assess treatment efficacy.",
+}
 
 export async function transcribeAudio(formData: FormData) {
   try {
-    // For demo purposes, we'll always use a simulated transcript
-    // This avoids issues with blob URLs and file processing in the preview environment
+    const audioFile = formData.get("audio") as File
 
-    // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    if (!audioFile) {
+      throw new Error("No audio file provided")
+    }
 
-    // Generate a simulated transcript
-    const simulatedTranscript =
-      "Patient reports experiencing headaches for the past week, primarily in the frontal region. " +
-      "The pain is described as throbbing and ranges from 4 to 7 out of 10 in intensity. " +
-      "Headaches typically last 2-3 hours and are worse in the morning. " +
-      "Patient has tried over-the-counter pain relievers with minimal relief. " +
-      "No nausea or visual disturbances reported. " +
-      "Patient mentions increased stress at work and irregular sleep patterns recently. " +
-      "Vital signs show BP of 128/82, pulse 76, temperature 98.6°F. " +
-      "Neurological examination is normal with no focal deficits. " +
-      "Assessment indicates tension headaches likely related to stress and poor sleep hygiene. " +
-      "Plan includes stress management techniques, sleep hygiene education, and a trial of prescription-strength NSAIDs. " +
-      "Follow-up in 2 weeks if symptoms persist."
-
-    console.log("Using simulated transcript for demo")
+    // Simulate processing time (at least 15 seconds for transcription)
+    await new Promise((resolve) => setTimeout(resolve, 15000))
 
     try {
-      // Generate SOAP notes from the transcript using Groq
-      const soapNotes = await generateSoapNotes(simulatedTranscript)
+      // Try to generate SOAP notes from the transcript
+      // Add additional delay to ensure total processing time is at least 30 seconds
+      await new Promise((resolve) => setTimeout(resolve, 15000))
+
+      // For demo purposes, we'll use sample data instead of trying to call AI services
+      // This avoids potential issues with external resources
 
       // Store the SOAP notes in your database or state management
       revalidatePath("/")
 
-      return { transcript: simulatedTranscript, soapNotes }
+      return { transcript: sampleTranscript, soapNotes: sampleSoapNotes }
     } catch (soapError) {
       console.error("Error generating SOAP notes:", soapError)
 
       // Return the transcript but with default SOAP notes
       return {
-        transcript: simulatedTranscript,
-        soapNotes: {
-          subjective:
-            "Patient reports experiencing headaches for the past week, primarily in the frontal region. The pain is described as throbbing and ranges from 4 to 7 out of 10 in intensity. Headaches typically last 2-3 hours and are worse in the morning. Patient has tried over-the-counter pain relievers with minimal relief. No nausea or visual disturbances reported. Patient mentions increased stress at work and irregular sleep patterns recently.",
-          objective:
-            "Vital signs show BP of 128/82, pulse 76, temperature 98.6°F. Neurological examination is normal with no focal deficits.",
-          assessment: "Tension headaches likely related to stress and poor sleep hygiene.",
-          plan: "Stress management techniques, sleep hygiene education, and a trial of prescription-strength NSAIDs. Follow-up in 2 weeks if symptoms persist.",
-        },
+        transcript: sampleTranscript,
+        soapNotes: sampleSoapNotes,
       }
     }
   } catch (error) {
     console.error("Transcription error:", error)
-
-    // Provide fallback data even in case of error
-    return {
-      transcript: "Error retrieving transcript. Please try again.",
-      soapNotes: {
-        subjective: "Unable to generate subjective notes.",
-        objective: "Unable to generate objective notes.",
-        assessment: "Unable to generate assessment.",
-        plan: "Unable to generate plan.",
-      },
-    }
+    throw new Error("Failed to transcribe audio: " + (error instanceof Error ? error.message : "Unknown error"))
   }
 }

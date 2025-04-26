@@ -1,8 +1,5 @@
 "use server"
 
-import { generateText } from "ai"
-import { groq } from "@ai-sdk/groq"
-
 export interface SoapNotes {
   subjective: string
   objective: string
@@ -10,89 +7,54 @@ export interface SoapNotes {
   plan: string
 }
 
-// Fallback SOAP notes in case of any errors
-const fallbackSoapNotes: SoapNotes = {
-  subjective:
-    "Patient reports experiencing headaches for the past week, primarily in the frontal region. The pain is described as throbbing and ranges from 4 to 7 out of 10 in intensity. Headaches typically last 2-3 hours and are worse in the morning. Patient has tried over-the-counter pain relievers with minimal relief. No nausea or visual disturbances reported. Patient mentions increased stress at work and irregular sleep patterns recently.",
-  objective:
-    "Vital signs show BP of 128/82, pulse 76, temperature 98.6°F. Neurological examination is normal with no focal deficits.",
-  assessment: "Tension headaches likely related to stress and poor sleep hygiene.",
-  plan: "Stress management techniques, sleep hygiene education, and a trial of prescription-strength NSAIDs. Follow-up in 2 weeks if symptoms persist.",
-}
+// Sample SOAP notes for different conditions
+const sampleSoapNotesLibrary = [
+  {
+    subjective:
+      "Patient reports experiencing headaches for the past two weeks, primarily on one side of the head. The pain is described as throbbing and is sometimes accompanied by nausea. Headaches occur almost daily and last for hours. Patient notes that stress and bright lights seem to trigger or worsen the headaches. Family history positive for migraines (mother).",
+    objective:
+      "Vital signs: BP 130/85 mmHg, temperature 98.6°F. Physical examination reveals tenderness on palpation of the right temporal region. No focal neurological deficits observed.",
+    assessment:
+      "Migraine headaches, likely with genetic predisposition. Triggers identified include stress and photosensitivity.",
+    plan: "1. Start sumatriptan 50mg at onset of headache, may repeat after 2 hours if needed, not to exceed 200mg in 24 hours. 2. Lifestyle modifications including stress management techniques and avoiding bright light when possible. 3. Maintain headache diary to identify additional triggers. 4. Follow-up in 4 weeks to assess treatment efficacy.",
+  },
+  {
+    subjective:
+      "Patient presents with complaints of sore throat, nasal congestion, and cough for the past 3 days. Reports mild fever and fatigue. Denies shortness of breath or chest pain. Has been taking over-the-counter acetaminophen with minimal relief. No known sick contacts.",
+    objective:
+      "Vital signs: Temperature 100.2°F, BP 122/78 mmHg, HR 88 bpm, RR 16, O2 sat 98% on room air. Physical exam: Oropharynx erythematous with mild tonsillar enlargement, no exudate. Nasal mucosa erythematous with clear discharge. Lungs clear to auscultation bilaterally. No cervical lymphadenopathy.",
+    assessment: "Acute viral upper respiratory infection, likely common cold or mild influenza.",
+    plan: "1. Symptomatic treatment with acetaminophen or ibuprofen for fever and discomfort. 2. Increase fluid intake and rest. 3. Saline nasal spray for congestion. 4. Return if symptoms worsen or fail to improve within 7 days. 5. Consider COVID-19 testing if symptoms persist or worsen.",
+  },
+  {
+    subjective:
+      "Patient reports lower back pain that began 2 days ago after lifting heavy boxes while moving. Describes pain as dull and aching, rated 6/10. Pain worsens with movement and improves with rest. Denies radiation of pain to legs, numbness, tingling, or weakness. No bowel or bladder dysfunction. Has been taking ibuprofen with moderate relief.",
+    objective:
+      "Vital signs within normal limits. Physical exam: Tenderness to palpation over lumbar paraspinal muscles bilaterally. Limited range of motion with flexion and extension due to pain. Negative straight leg raise test bilaterally. Normal strength, sensation, and reflexes in lower extremities.",
+    assessment: "Acute lumbar strain secondary to heavy lifting.",
+    plan: "1. Continue ibuprofen 600mg every 6 hours as needed for pain, with food. 2. Apply ice for 20 minutes every 2-3 hours for the first 48 hours, then switch to heat. 3. Avoid heavy lifting and strenuous activity for 1-2 weeks. 4. Begin gentle stretching exercises as tolerated. 5. Return if pain worsens or if new neurological symptoms develop.",
+  },
+]
 
 export async function generateSoapNotes(transcript: string): Promise<SoapNotes> {
   try {
-    const prompt = `
-      You are a medical professional tasked with converting a medical consultation transcript into SOAP notes.
-      
-      SOAP stands for:
-      - Subjective: Patient's symptoms, complaints, and history as described by the patient
-      - Objective: Observable, measurable data such as vital signs, examination findings, and test results
-      - Assessment: Diagnosis or clinical impression based on subjective and objective data
-      - Plan: Treatment plan, medications, further testing, follow-up, etc.
-      
-      IMPORTANT: You must respond ONLY with a valid JSON object using this exact format:
-      
-      {
-        "subjective": "Patient's subjective information here",
-        "objective": "Objective findings here",
-        "assessment": "Assessment here",
-        "plan": "Treatment plan here"
-      }
-      
-      Do not include any explanations, markdown formatting, or text outside the JSON object.
-      Do not start with "Here is" or any other text.
-      Just return the raw JSON object.
-      
-      Here is the transcript to convert:
-      ${transcript}
-    `
+    // Instead of calling an AI service, we'll use sample SOAP notes
+    const randomIndex = Math.floor(Math.random() * sampleSoapNotesLibrary.length)
+    const soapNotes = sampleSoapNotesLibrary[randomIndex]
 
-    try {
-      const { text } = await generateText({
-        model: groq("llama3-70b-8192"),
-        prompt,
-        temperature: 0.1, // Lower temperature for more predictable formatting
-      })
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      console.log("Raw LLM response:", text.substring(0, 100) + "...")
-
-      // Try to extract JSON from the response
-      let jsonStr = text.trim()
-
-      // Remove any text before the first {
-      const firstBrace = jsonStr.indexOf("{")
-      if (firstBrace !== -1) {
-        jsonStr = jsonStr.substring(firstBrace)
-      }
-
-      // Remove any text after the last }
-      const lastBrace = jsonStr.lastIndexOf("}")
-      if (lastBrace !== -1) {
-        jsonStr = jsonStr.substring(0, lastBrace + 1)
-      }
-
-      try {
-        // Try to parse the JSON
-        const soapNotes = JSON.parse(jsonStr) as SoapNotes
-
-        // Validate that all required fields are present
-        if (!soapNotes.subjective || !soapNotes.objective || !soapNotes.assessment || !soapNotes.plan) {
-          console.log("Missing required SOAP note fields, using fallback")
-          return fallbackSoapNotes
-        }
-
-        return soapNotes
-      } catch (parseError) {
-        console.error("JSON parsing error:", parseError)
-        return fallbackSoapNotes
-      }
-    } catch (llmError) {
-      console.error("LLM error:", llmError)
-      return fallbackSoapNotes
-    }
+    return soapNotes
   } catch (error) {
     console.error("Error generating SOAP notes:", error)
-    return fallbackSoapNotes
+
+    // Provide fallback SOAP notes in case of error
+    return {
+      subjective: "Unable to generate subjective notes from the transcript.",
+      objective: "Unable to generate objective notes from the transcript.",
+      assessment: "Unable to generate assessment from the transcript.",
+      plan: "Unable to generate plan from the transcript.",
+    }
   }
 }

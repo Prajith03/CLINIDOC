@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Navbar from "@/components/navbar"
+import { SoapNotesProvider } from "@/context/soap-notes-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -19,11 +20,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <Navbar />
-          <main className="min-h-screen bg-gray-50 dark:bg-gray-900">{children}</main>
+        <ThemeProvider>
+          <SoapNotesProvider>
+            <Navbar />
+            <main className="min-h-screen bg-background">{children}</main>
+          </SoapNotesProvider>
         </ThemeProvider>
       </body>
     </html>

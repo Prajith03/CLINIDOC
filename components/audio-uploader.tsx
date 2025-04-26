@@ -22,27 +22,18 @@ interface TranscriptionResult {
 
 interface AudioUploaderProps {
   onTranscriptionComplete?: (result: TranscriptionResult) => void
+  onStartTranscription?: () => void
 }
 
-export function AudioUploader({ onTranscriptionComplete }: AudioUploaderProps) {
+export function AudioUploader({ onTranscriptionComplete, onStartTranscription }: AudioUploaderProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Just update the UI state, don't actually process the file
-    // This avoids issues with blob URLs in the preview environment
-    const files = e.target.files
-    if (files && files.length > 0) {
-      setSelectedFile({
-        name: files[0].name,
-        size: files[0].size,
-        type: files[0].type,
-      } as File)
-    } else {
-      setSelectedFile(null)
-    }
+    const file = e.target.files?.[0] || null
+    setSelectedFile(file)
   }
 
   const handleUpload = async () => {
@@ -57,13 +48,24 @@ export function AudioUploader({ onTranscriptionComplete }: AudioUploaderProps) {
 
     setIsUploading(true)
 
-    try {
-      // Simulate processing time
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+    // Notify parent component to show loading state
+    if (onStartTranscription) {
+      onStartTranscription()
+    }
 
-      // Call the transcription action directly without actual file data
-      // This avoids issues with blob URLs in the preview environment
-      const result = await transcribeAudio(new FormData())
+    try {
+      console.log("Selected file:", selectedFile.name, selectedFile.type, selectedFile.size, "bytes")
+
+      // Check file size
+      if (selectedFile.size < 100) {
+        throw new Error("Audio file too small or possibly corrupted")
+      }
+
+      const formData = new FormData()
+      formData.append("audio", selectedFile)
+
+      const result = await transcribeAudio(formData)
+      console.log("Transcription result:", result)
 
       toast({
         title: "Transcription Complete",
@@ -87,6 +89,19 @@ export function AudioUploader({ onTranscriptionComplete }: AudioUploaderProps) {
         description: error instanceof Error ? error.message : "There was an error processing your audio.",
         variant: "destructive",
       })
+
+      // Reset loading state in case of error
+      if (onTranscriptionComplete) {
+        onTranscriptionComplete({
+          transcript: "Error processing audio.",
+          soapNotes: {
+            subjective: "Error processing audio.",
+            objective: "Error processing audio.",
+            assessment: "Error processing audio.",
+            plan: "Error processing audio.",
+          },
+        })
+      }
     } finally {
       setIsUploading(false)
     }

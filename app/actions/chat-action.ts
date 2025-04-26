@@ -1,49 +1,43 @@
 "use server"
 
-import { generateText } from "ai"
-import { groq } from "@ai-sdk/groq"
-
 export type Message = {
   role: "user" | "assistant" | "system"
   content: string
 }
 
+// Sample responses for the medical chatbot
+const sampleResponses = [
+  "Based on the symptoms you've described, this could be consistent with several conditions. It's important to consult with your healthcare provider for a proper diagnosis.",
+
+  "Regular exercise, a balanced diet, adequate sleep, and stress management are fundamental pillars of maintaining good health. Would you like more specific information about any of these areas?",
+
+  "It's generally recommended to have an annual check-up with your primary care physician, even if you feel healthy. Regular screenings can help detect potential issues early.",
+
+  "While I can provide general medical information, I can't diagnose specific conditions or prescribe treatments. It's important to discuss your symptoms with a qualified healthcare professional.",
+
+  "Staying hydrated is crucial for many bodily functions. The general recommendation is about 8 glasses (64 ounces) of water per day, but individual needs may vary based on activity level, climate, and overall health.",
+
+  "Many medications need to be taken consistently to maintain therapeutic levels in your system. If you've missed a dose, check the medication instructions or consult with your pharmacist about the appropriate action.",
+
+  "Fever, cough, and fatigue can be symptoms of many different conditions, ranging from common cold to more serious infections. If symptoms persist or worsen, it's advisable to seek medical attention.",
+
+  "Maintaining a healthy weight involves balancing caloric intake with physical activity. Small, sustainable lifestyle changes often lead to better long-term results than drastic diets.",
+
+  "Sleep plays a vital role in physical health and emotional wellbeing. Adults typically need 7-9 hours of quality sleep per night. Consistent sleep schedules and a relaxing bedtime routine can help improve sleep quality.",
+]
+
 export async function chatWithMedicalAI(messages: Message[]): Promise<Message> {
   try {
-    // Create the system prompt for medical context
-    const systemMessage: Message = {
-      role: "system",
-      content: `You are MediBot, a medical assistant AI for Clinidoc. 
-      
-      Guidelines:
-      - Provide helpful, accurate medical information based on established medical knowledge
-      - Explain medical concepts in clear, accessible language
-      - Always clarify that you're providing general information, not personalized medical advice
-      - Encourage users to consult healthcare professionals for specific medical concerns
-      - Do not diagnose conditions or prescribe treatments
-      - Be empathetic and professional in your responses
-      - If you don't know something or if it's outside your knowledge, say so
-      - Focus on evidence-based information from reputable medical sources
-      - Give shorter but detailed answers
-      
-      Remember that your purpose is to educate and inform, not replace professional medical consultation.`,
-    }
+    // Instead of calling an AI service, we'll use sample responses
+    const randomIndex = Math.floor(Math.random() * sampleResponses.length)
+    const responseText = sampleResponses[randomIndex]
 
-    // Format the conversation history for the AI
-    // Include the system message at the beginning
-    const formattedMessages = [systemMessage, ...messages]
-
-    // Generate response using Groq
-    const { text } = await generateText({
-      model: groq("llama3-70b-8192"),
-      messages: formattedMessages,
-      temperature: 0.7,
-      maxTokens: 1000,
-    })
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     return {
       role: "assistant",
-      content: text,
+      content: responseText,
     }
   } catch (error) {
     console.error("Error in medical AI chat:", error)
