@@ -6,6 +6,8 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Heart, Utensils, Activity, ArrowRight, Pill, Brain, Loader2 } from "lucide-react"
+import { generateText } from "ai"
+import { groq } from "@ai-sdk/groq"
 import { useSoapNotes } from "@/context/soap-notes-context"
 
 // Sample suggestions for fallback
@@ -159,14 +161,113 @@ export default function SuggestionsPage() {
       setIsLoading(true)
 
       try {
-        // Simulate loading time
-        await new Promise((resolve) => setTimeout(resolve, 1500))
+        // Check if we have SOAP notes to work with
+        if (!soapNotes || !soapNotes.subjective || !soapNotes.objective || !soapNotes.assessment || !soapNotes.plan) {
+          // No valid SOAP notes, use fallback
+          console.log("No valid SOAP notes available, using fallback suggestions")
 
-        // Randomly choose between the two sets of fallback data for variety
-        const useFallback = Math.random() > 0.5
+          // Randomly choose between the two sets of fallback data for variety
+          const useFallback = Math.random() > 0.5
 
-        setSuggestions(useFallback ? fallbackSuggestions : alternativeFallbackSuggestions)
-        setInsights(useFallback ? fallbackInsights : alternativeFallbackInsights)
+          setSuggestions(useFallback ? fallbackSuggestions : alternativeFallbackSuggestions)
+          setInsights(useFallback ? fallbackInsights : alternativeFallbackInsights)
+          setIsLoading(false)
+          return
+        }
+
+        // Combine SOAP notes into a single string for the AI
+        const soapText = `
+          Subjective: ${soapNotes.subjective}
+          Objective: ${soapNotes.objective}
+          Assessment: ${soapNotes.assessment}
+          Plan: ${soapNotes.plan}
+        `
+
+        try {
+          // Generate suggestions using Groq
+          const { text } = await generateText({
+            model: groq("llama3-70b-8192"),
+            prompt: `Based on the following SOAP notes for a patient, generate personalized medical suggestions in JSON format.
+            
+            SOAP Notes:
+            ${soapText}
+            
+            Generate a JSON object with the following structure:
+            {
+              "suggestions": [
+                {
+                  "category": "Lifestyle",
+                  "items": [
+                    {"title": "Suggestion title", "description": "Detailed description"}
+                  ]
+                },
+                // More categories: Nutrition, Exercise, Medication, Education
+              ],
+              "insights": [
+                "Insight 1",
+                "Insight 2",
+                "Insight 3"
+              ]
+            }
+            
+            Focus on practical, evidence-based recommendations that address the patient's specific condition.
+            Only return the JSON object, no other text.`,
+            temperature: 0.2,
+          })
+
+          // Parse the response
+          try {
+            // Extract JSON from the response
+            const jsonMatch = text.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const jsonData = JSON.parse(jsonMatch[0])
+
+              // Map the suggestions with icons
+              const mappedSuggestions = jsonData.suggestions.map((suggestion: any) => {
+                let icon
+                switch (suggestion.category) {
+                  case "Lifestyle":
+                    icon = <Heart className="h-5 w-5 text-primary" />
+                    break
+                  case "Nutrition":
+                    icon = <Utensils className="h-5 w-5 text-primary" />
+                    break
+                  case "Exercise":
+                    icon = <Activity className="h-5 w-5 text-primary" />
+                    break
+                  case "Medication":
+                    icon = <Pill className="h-5 w-5 text-primary" />
+                    break
+                  case "Education":
+                    icon = <Brain className="h-5 w-5 text-primary" />
+                    break
+                  default:
+                    icon = <Heart className="h-5 w-5 text-primary" />
+                }
+
+                return {
+                  ...suggestion,
+                  icon,
+                }
+              })
+
+              setSuggestions(mappedSuggestions)
+              setInsights(jsonData.insights)
+            } else {
+              throw new Error("Could not extract JSON from response")
+            }
+          } catch (error) {
+            console.error("Error parsing AI response:", error)
+            // Fallback to default suggestions
+            setSuggestions(fallbackSuggestions)
+            setInsights(fallbackInsights)
+          }
+        } catch (error) {
+          console.error("Error generating suggestions with Groq:", error)
+          // Fallback to default suggestions
+          setSuggestions(fallbackSuggestions)
+          setInsights(fallbackInsights)
+        }
       } catch (error) {
         console.error("Error generating suggestions:", error)
         setSuggestions(fallbackSuggestions)

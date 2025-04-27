@@ -27,7 +27,7 @@ export function FallbackChatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hello! I'm MediBot, your medical assistant. How can I help you with medical information today?",
+      content: "Hello! I'm CliniDoc MediBot, your medical assistant. How can I help you with medical information today?",
     },
   ])
   const [input, setInput] = useState("")

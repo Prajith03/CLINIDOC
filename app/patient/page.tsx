@@ -4,15 +4,88 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, FileText, Activity, Pill, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react"
+import {
+  Calendar,
+  Clock,
+  FileText,
+  Activity,
+  Pill,
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Loader2,
+} from "lucide-react"
 import { useSoapNotes } from "@/context/soap-notes-context"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
+import { generatePatientPDF } from "@/lib/generate-pdf"
+import { useToast } from "@/hooks/use-toast"
+
+// Sample blood pressure data for each patient
+const bpData = {
+  1: [
+    { month: "Jan", systolic: 135, diastolic: 85 },
+    { month: "Feb", systolic: 138, diastolic: 87 },
+    { month: "Mar", systolic: 132, diastolic: 84 },
+    { month: "Apr", systolic: 130, diastolic: 82 },
+    { month: "May", systolic: 128, diastolic: 80 },
+    { month: "Jun", systolic: 129, diastolic: 81 },
+  ],
+  2: [
+    { month: "Jan", systolic: 120, diastolic: 75 },
+    { month: "Feb", systolic: 118, diastolic: 73 },
+    { month: "Mar", systolic: 122, diastolic: 76 },
+    { month: "Apr", systolic: 119, diastolic: 74 },
+    { month: "May", systolic: 121, diastolic: 75 },
+    { month: "Jun", systolic: 120, diastolic: 74 },
+  ],
+  3: [
+    { month: "Jan", systolic: 145, diastolic: 90 },
+    { month: "Feb", systolic: 142, diastolic: 88 },
+    { month: "Mar", systolic: 140, diastolic: 87 },
+    { month: "Apr", systolic: 138, diastolic: 86 },
+    { month: "May", systolic: 135, diastolic: 84 },
+    { month: "Jun", systolic: 132, diastolic: 82 },
+  ],
+}
+
+// Sample secondary data for each patient (glucose, migraine, heart rate)
+const secondaryData = {
+  1: [
+    { month: "Jan", value: 145 },
+    { month: "Feb", value: 139 },
+    { month: "Mar", value: 142 },
+    { month: "Apr", value: 135 },
+    { month: "May", value: 130 },
+    { month: "Jun", value: 128 },
+  ],
+  2: [
+    { month: "Jan", value: 4 },
+    { month: "Feb", value: 5 },
+    { month: "Mar", value: 3 },
+    { month: "Apr", value: 2 },
+    { month: "May", value: 3 },
+    { month: "Jun", value: 2 },
+  ],
+  3: [
+    { month: "Jan", value: 82 },
+    { month: "Feb", value: 80 },
+    { month: "Mar", value: 78 },
+    { month: "Apr", value: 76 },
+    { month: "May", value: 75 },
+    { month: "Jun", value: 74 },
+  ],
+}
 
 export default function PatientPage() {
   const { patients, currentPatient, setCurrentPatient } = useSoapNotes()
+  const { toast } = useToast()
   const [currentPatientIndex, setCurrentPatientIndex] = useState(() => {
     const index = patients.findIndex((p) => p.name === currentPatient)
     return index >= 0 ? index : 0
   })
+  const [isPdfLoading, setIsPdfLoading] = useState(false)
 
   const patient = patients[currentPatientIndex]
 
@@ -27,6 +100,38 @@ export default function PatientPage() {
     setCurrentPatientIndex(newIndex)
     setCurrentPatient(patients[newIndex].name)
   }
+
+  const handleDownloadPDF = async () => {
+    try {
+      setIsPdfLoading(true)
+      await generatePatientPDF(patient)
+      toast({
+        title: "PDF Generated",
+        description: `Medical record for ${patient.name} has been downloaded.`,
+      })
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsPdfLoading(false)
+    }
+  }
+
+  // Get the appropriate data for the current patient
+  const patientBPData = bpData[patient.id as keyof typeof bpData] || bpData[1]
+  const patientSecondaryData = secondaryData[patient.id as keyof typeof secondaryData] || secondaryData[1]
+
+  // Get the appropriate label for the secondary chart
+  const secondaryChartLabel =
+    patient.id === 1
+      ? "Blood Glucose (mg/dL)"
+      : patient.id === 2
+        ? "Migraine Frequency (episodes/month)"
+        : "Heart Rate (bpm)"
 
   return (
     <div className="container py-10">
@@ -46,6 +151,19 @@ export default function PatientPage() {
           </span>
           <Button variant="outline" size="icon" onClick={nextPatient}>
             <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={handleDownloadPDF} disabled={isPdfLoading}>
+            {isPdfLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download PDF
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -243,37 +361,74 @@ export default function PatientPage() {
                 <div className="space-y-4">
                   <div className="border-b pb-3">
                     <h3 className="font-medium">Blood Pressure (mmHg)</h3>
-                    <div className="h-40 mt-2 bg-muted rounded-md flex items-center justify-center">
-                      <p className="text-sm text-muted-foreground">Blood pressure chart visualization</p>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                      <span>Jan 2023</span>
-                      <span>Mar 2023</span>
-                      <span>Jun 2023</span>
+                    <div className="h-40 mt-2">
+                      <ChartContainer
+                        className="h-full w-full"
+                        config={{
+                          systolic: {
+                            label: "Systolic",
+                            color: "hsl(var(--primary))",
+                          },
+                          diastolic: {
+                            label: "Diastolic",
+                            color: "hsl(var(--muted-foreground))",
+                          },
+                        }}
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={patientBPData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" />
+                            <YAxis domain={[60, 160]} />
+                            <Tooltip content={<ChartTooltipContent />} />
+                            <Line
+                              type="monotone"
+                              dataKey="systolic"
+                              stroke="var(--color-systolic)"
+                              strokeWidth={2}
+                              dot={{ r: 3 }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="diastolic"
+                              stroke="var(--color-diastolic)"
+                              strokeWidth={2}
+                              dot={{ r: 3 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="font-medium">
-                      {patient.id === 1
-                        ? "Blood Glucose (mg/dL)"
-                        : patient.id === 2
-                          ? "Migraine Frequency"
-                          : "Heart Rate (bpm)"}
-                    </h3>
-                    <div className="h-40 mt-2 bg-muted rounded-md flex items-center justify-center">
-                      <p className="text-sm text-muted-foreground">
-                        {patient.id === 1
-                          ? "Blood glucose chart visualization"
-                          : patient.id === 2
-                            ? "Migraine frequency chart visualization"
-                            : "Heart rate chart visualization"}
-                      </p>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                      <span>Jan 2023</span>
-                      <span>Mar 2023</span>
-                      <span>Jun 2023</span>
+                    <h3 className="font-medium">{secondaryChartLabel}</h3>
+                    <div className="h-40 mt-2">
+                      <ChartContainer
+                        className="h-full w-full"
+                        config={{
+                          value: {
+                            label: secondaryChartLabel,
+                            color: "hsl(var(--primary))",
+                          },
+                        }}
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={patientSecondaryData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" />
+                            <YAxis />
+                            <Tooltip content={<ChartTooltipContent />} />
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke="var(--color-value)"
+                              strokeWidth={2}
+                              dot={{ r: 3 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                     </div>
                   </div>
                 </div>

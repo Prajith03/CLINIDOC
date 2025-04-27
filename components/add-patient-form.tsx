@@ -18,9 +18,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { UserPlus } from "lucide-react"
 import { useSoapNotes } from "@/context/soap-notes-context"
+import { useToast } from "@/hooks/use-toast"
 
 export function AddPatientForm() {
   const { addPatient } = useSoapNotes()
+  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -42,6 +44,15 @@ export function AddPatientForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!formData.name || !formData.age) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      })
+      return
+    }
+
     // Create a new patient object
     const newPatient = {
       id: Date.now(), // Use timestamp as temporary ID
@@ -56,15 +67,21 @@ export function AddPatientForm() {
       medicalHistory: {
         chronicConditions: [],
         surgeries: [],
-        allergies: formData.allergies.split(",").map((allergy) => ({
-          name: allergy.trim(),
-          severity: "unknown",
-        })),
-        medications: formData.medications.split(",").map((med) => ({
-          name: med.trim(),
-          dosage: "Not specified",
-          purpose: "Not specified",
-        })),
+        allergies: formData.allergies
+          .split(",")
+          .filter((a) => a.trim())
+          .map((allergy) => ({
+            name: allergy.trim(),
+            severity: "unknown",
+          })),
+        medications: formData.medications
+          .split(",")
+          .filter((m) => m.trim())
+          .map((med) => ({
+            name: med.trim(),
+            dosage: "Not specified",
+            purpose: "Not specified",
+          })),
       },
       diagnosis: [],
       labResults: {},
@@ -76,6 +93,11 @@ export function AddPatientForm() {
 
     // Add the patient to the context
     addPatient(newPatient)
+
+    toast({
+      title: "Patient added",
+      description: `${formData.name} has been added successfully.`,
+    })
 
     // Reset form and close dialog
     setFormData({

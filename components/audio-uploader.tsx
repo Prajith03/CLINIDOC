@@ -28,8 +28,10 @@ interface AudioUploaderProps {
 export function AudioUploader({ onTranscriptionComplete, onStartTranscription }: AudioUploaderProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
@@ -47,11 +49,20 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
     }
 
     setIsUploading(true)
+    setUploadProgress(0)
 
     // Notify parent component to show loading state
     if (onStartTranscription) {
       onStartTranscription()
     }
+
+    // Simulate progress over 40 seconds
+    progressIntervalRef.current = setInterval(() => {
+      setUploadProgress((prev) => {
+        const newProgress = prev + 100 / 40 // Increase by ~2.5% every second
+        return newProgress > 99 ? 99 : newProgress
+      })
+    }, 1000)
 
     try {
       console.log("Selected file:", selectedFile.name, selectedFile.type, selectedFile.size, "bytes")
@@ -63,6 +74,18 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
 
       const formData = new FormData()
       formData.append("audio", selectedFile)
+
+      // Wait for 40 seconds to simulate processing
+      await new Promise((resolve) => setTimeout(resolve, 40000))
+
+      // Clear the progress interval
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
+
+      // Set progress to 100%
+      setUploadProgress(100)
 
       const result = await transcribeAudio(formData)
       console.log("Transcription result:", result)
@@ -104,6 +127,13 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
       }
     } finally {
       setIsUploading(false)
+      setUploadProgress(0)
+
+      // Clear the progress interval if it's still running
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
     }
   }
 
@@ -133,6 +163,16 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
         <div className="text-sm">
           Selected file: <span className="font-medium">{selectedFile.name}</span> (
           {Math.round(selectedFile.size / 1024)} KB)
+        </div>
+      )}
+
+      {isUploading && (
+        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-2">
+          <div
+            className="bg-primary h-2.5 rounded-full transition-all duration-300 ease-in-out"
+            style={{ width: `${uploadProgress}%` }}
+          ></div>
+          <p className="text-xs text-muted-foreground mt-1 text-center">Processing: {Math.round(uploadProgress)}%</p>
         </div>
       )}
 

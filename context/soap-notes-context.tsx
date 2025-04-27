@@ -93,7 +93,7 @@ interface SoapNotesContextType {
 const initialPatients: Patient[] = [
   {
     id: 1,
-    name: "John Doe",
+    name: "Ramesh Kumar",
     age: 42,
     gender: "Male",
     medicalHistory: {
@@ -172,13 +172,13 @@ const initialPatients: Patient[] = [
       upcoming: [
         {
           type: "Annual Physical Examination",
-          doctor: "Dr. Sarah Johnson",
+          doctor: "Dr. Ragul Gandhi",
           date: "July 15, 2023",
           time: "10:30 AM",
         },
         {
           type: "Diabetes Follow-up",
-          doctor: "Dr. Michael Chen",
+          doctor: "Dr. Abishek A",
           date: "August 3, 2023",
           time: "2:15 PM",
         },
@@ -186,13 +186,13 @@ const initialPatients: Patient[] = [
       past: [
         {
           type: "Quarterly Diabetes Check",
-          doctor: "Dr. Michael Chen",
+          doctor: "Dr.Dharshan",
           date: "March 10, 2023",
           time: "1:45 PM",
         },
         {
           type: "Blood Pressure Follow-up",
-          doctor: "Dr. Sarah Johnson",
+          doctor: "Dr. Kavin A",
           date: "January 22, 2023",
           time: "9:15 AM",
         },
@@ -201,7 +201,7 @@ const initialPatients: Patient[] = [
   },
   {
     id: 2,
-    name: "Sarah Smith",
+    name: "Ramana Vinayak",
     age: 35,
     gender: "Female",
     medicalHistory: {
@@ -257,7 +257,7 @@ const initialPatients: Patient[] = [
       upcoming: [
         {
           type: "Anxiety Management Follow-up",
-          doctor: "Dr. Sarah Johnson",
+          doctor: "Dr. Sriram",
           date: "July 20, 2023",
           time: "1:00 PM",
         },
@@ -265,13 +265,13 @@ const initialPatients: Patient[] = [
       past: [
         {
           type: "Annual Physical",
-          doctor: "Dr. Sarah Johnson",
+          doctor: "Dr. Ragul Gandhi",
           date: "February 15, 2023",
           time: "10:00 AM",
         },
         {
           type: "Migraine Consultation",
-          doctor: "Dr. Robert Lee",
+          doctor: "Dr. Abishek A",
           date: "November 12, 2022",
           time: "3:30 PM",
         },
@@ -280,7 +280,7 @@ const initialPatients: Patient[] = [
   },
   {
     id: 3,
-    name: "Michael Johnson",
+    name: "Keerthi Balaji",
     age: 58,
     gender: "Male",
     medicalHistory: {
@@ -347,13 +347,13 @@ const initialPatients: Patient[] = [
       upcoming: [
         {
           type: "Cardiology Follow-up",
-          doctor: "Dr. James Wilson",
+          doctor: "Dr. RajKumar",
           date: "July 25, 2023",
           time: "9:00 AM",
         },
         {
           type: "Orthopedic Evaluation",
-          doctor: "Dr. Lisa Chen",
+          doctor: "Dr. Niranjan",
           date: "August 10, 2023",
           time: "11:30 AM",
         },
@@ -361,13 +361,13 @@ const initialPatients: Patient[] = [
       past: [
         {
           type: "Annual Physical",
-          doctor: "Dr. Sarah Johnson",
+          doctor: "Dr. Ragul Gandhi",
           date: "April 5, 2023",
           time: "2:00 PM",
         },
         {
           type: "Cardiac Stress Test",
-          doctor: "Dr. James Wilson",
+          doctor: "Dr. Pranesh",
           date: "January 15, 2023",
           time: "10:30 AM",
         },
@@ -385,10 +385,15 @@ export function SoapNotesProvider({ children }: { children: ReactNode }) {
   const [patients, setPatients] = useState<Patient[]>(initialPatients)
 
   const addPatient = (patient: Patient) => {
-    console.log("Adding patient:", patient)
-    setPatients((prev) => [...prev, patient])
-    // Optionally set the current patient to the newly added one
-    setCurrentPatient(patient.name)
+    // Ensure patient has a unique ID
+    const newPatient = {
+      ...patient,
+      id: Date.now(), // Use timestamp as ID to ensure uniqueness
+    }
+
+    console.log("Adding patient:", newPatient)
+    setPatients((prevPatients) => [...prevPatients, newPatient])
+    setCurrentPatient(newPatient.name)
   }
 
   const getPatientByName = (name: string) => {

@@ -97,13 +97,49 @@ export function AudioRecorder({ onTranscriptionComplete, onStartTranscription }:
 
       // Debug: Log the audio blob size
       console.log("Audio blob size:", audioBlob.size, "bytes")
+      console.log("Recording duration:", recordingTime, "seconds")
 
       if (audioBlob.size < 100) {
         throw new Error("Audio recording too short or empty")
       }
 
+      // Check if recording is less than 1 minute
+      if (recordingTime < 60) {
+        toast({
+          title: "Recording Too Short",
+          description: "Please record for at least 1 minute to capture a valid conversation.",
+          variant: "destructive",
+        })
+
+        // Return invalid conversation result
+        if (onTranscriptionComplete) {
+          onTranscriptionComplete({
+            transcript:
+              "Audio recording too short. Please provide a recording of at least 1 minute for proper analysis.",
+            soapNotes: {
+              subjective: "Not a valid conversation. The audio recording was too short (less than 1 minute).",
+              objective: "Unable to extract objective data from insufficient audio.",
+              assessment: "Unable to provide assessment from insufficient audio.",
+              plan: "Please provide a longer recording that includes a complete patient-doctor conversation.",
+            },
+          })
+        }
+
+        setIsProcessing(false)
+
+        // Stop all tracks in the stream to release the microphone
+        if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+          mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
+        }
+
+        return
+      }
+
       const formData = new FormData()
       formData.append("audio", audioBlob, "recording.webm")
+
+      // Simulate a 30-second processing time
+      await new Promise((resolve) => setTimeout(resolve, 30000))
 
       const result = await transcribeAudio(formData)
       console.log("Transcription result:", result)
@@ -181,6 +217,12 @@ export function AudioRecorder({ onTranscriptionComplete, onStartTranscription }:
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Processing audio...
+        </div>
+      )}
+
+      {isRecording && recordingTime < 60 && (
+        <div className="text-xs text-amber-500">
+          Recording must be at least 1 minute long for valid analysis ({60 - recordingTime} seconds remaining)
         </div>
       )}
     </div>

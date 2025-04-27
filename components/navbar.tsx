@@ -41,7 +41,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <ModeToggle />
-          <span className="text-sm text-muted-foreground">Dr. Sarah Johnson</span>
+          <span className="text-sm text-muted-foreground">Dr. Ragul Gandhi</span>
         </div>
       </div>
     </header>
