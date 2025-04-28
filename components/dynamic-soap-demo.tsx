@@ -4,25 +4,10 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Upload, Loader2 } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Upload, Loader2, RefreshCw } from "lucide-react"
+import { SoapNotesDisplay } from "@/components/soap-notes-display"
 import { useToast } from "@/hooks/use-toast"
-
-interface SoapNotes {
-  subjective: string
-  objective: string
-  assessment: string
-  plan: string
-}
-
-interface TranscriptionResult {
-  transcript: string
-  soapNotes: SoapNotes
-}
-
-interface AudioUploaderProps {
-  onTranscriptionComplete?: (result: TranscriptionResult) => void
-  onStartTranscription?: () => void
-}
 
 // Sample SOAP notes for first upload
 const firstSoapNotes = {
@@ -89,11 +74,13 @@ Patient: What should I do for it?
 Doctor: I recommend ibuprofen for pain and inflammation. Use ice for the next couple of days, then switch to heat. Rest for 2-3 days, but don't stay completely still - gentle movement is good. I'll show you some proper lifting techniques and give you some stretches to start in a few days. If things get worse or you develop leg symptoms, come back right away.
 `
 
-export function AudioUploader({ onTranscriptionComplete, onStartTranscription }: AudioUploaderProps) {
+export function DynamicSoapDemo() {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadCount, setUploadCount] = useState(0)
+  const [transcript, setTranscript] = useState<string | null>(null)
+  const [soapNotes, setSoapNotes] = useState<typeof firstSoapNotes | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -116,29 +103,17 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
     setIsUploading(true)
     setUploadProgress(0)
 
-    // Notify parent component to show loading state
-    if (onStartTranscription) {
-      onStartTranscription()
-    }
-
-    // Simulate progress over 40 seconds
+    // Simulate progress over 5 seconds (shortened for demo)
     progressIntervalRef.current = setInterval(() => {
       setUploadProgress((prev) => {
-        const newProgress = prev + 100 / 40 // Increase by ~2.5% every second
+        const newProgress = prev + 100 / 20 // Increase by 5% every second
         return newProgress > 99 ? 99 : newProgress
       })
-    }, 1000)
+    }, 250)
 
     try {
-      console.log("Selected file:", selectedFile.name, selectedFile.type, selectedFile.size, "bytes")
-
-      // Check file size
-      if (selectedFile.size < 100) {
-        throw new Error("Audio file too small or possibly corrupted")
-      }
-
-      // Wait for 40 seconds to simulate processing
-      await new Promise((resolve) => setTimeout(resolve, 10000)) // Reduced to 10 seconds for demo
+      // Simulate processing delay
+      await new Promise((resolve) => setTimeout(resolve, 5000))
 
       // Clear the progress interval
       if (progressIntervalRef.current) {
@@ -149,39 +124,26 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
       // Set progress to 100%
       setUploadProgress(100)
 
-      // Determine which sample to use based on upload count
+      // Determine which set of SOAP notes to show based on upload count
       const currentUploadCount = uploadCount + 1
       setUploadCount(currentUploadCount)
 
-      let result: TranscriptionResult
-
       if (currentUploadCount % 2 === 1) {
         // First upload or odd-numbered uploads
-        result = {
-          transcript: firstTranscript,
-          soapNotes: firstSoapNotes,
-        }
+        setSoapNotes(firstSoapNotes)
+        setTranscript(firstTranscript)
         toast({
-          title: "Transcription Complete",
+          title: "First Audio Processed",
           description: "Headache consultation transcribed successfully.",
         })
       } else {
         // Second upload or even-numbered uploads
-        result = {
-          transcript: secondTranscript,
-          soapNotes: secondSoapNotes,
-        }
+        setSoapNotes(secondSoapNotes)
+        setTranscript(secondTranscript)
         toast({
-          title: "Transcription Complete",
+          title: "Second Audio Processed",
           description: "Back pain consultation transcribed successfully.",
         })
-      }
-
-      console.log("Transcription result:", result)
-
-      // Call the callback function if provided
-      if (onTranscriptionComplete) {
-        onTranscriptionComplete(result)
       }
 
       // Reset file input
@@ -196,19 +158,6 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
         description: error instanceof Error ? error.message : "There was an error processing your audio.",
         variant: "destructive",
       })
-
-      // Reset loading state in case of error
-      if (onTranscriptionComplete) {
-        onTranscriptionComplete({
-          transcript: "Error processing audio.",
-          soapNotes: {
-            subjective: "Error processing audio.",
-            objective: "Error processing audio.",
-            assessment: "Error processing audio.",
-            plan: "Error processing audio.",
-          },
-        })
-      }
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
@@ -221,58 +170,149 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
     }
   }
 
+  const resetDemo = () => {
+    setSoapNotes(null)
+    setTranscript(null)
+    setUploadCount(0)
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+    toast({
+      title: "Demo Reset",
+      description: "The SOAP notes demo has been reset.",
+    })
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md border-muted-foreground/25 px-4">
-        <label htmlFor="audio-file" className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
-            <p className="mb-2 text-sm text-muted-foreground">
-              <span className="font-semibold">Click to upload</span> or drag and drop
-            </p>
-            <p className="text-xs text-muted-foreground">MP3, WAV, M4A, or WEBM (max. 30MB)</p>
-          </div>
-          <input
-            id="audio-file"
-            type="file"
-            className="hidden"
-            accept="audio/*"
-            onChange={handleFileChange}
-            ref={fileInputRef}
-          />
-        </label>
+    <div className="container py-10">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-4xl font-bold">Dynamic SOAP Notes Demo</h1>
+          <p className="text-lg text-muted-foreground">
+            Upload audio files to see different SOAP notes generated dynamically
+          </p>
+        </div>
+        <Button variant="outline" onClick={resetDemo} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Reset Demo
+        </Button>
       </div>
 
-      {selectedFile && (
-        <div className="text-sm">
-          Selected file: <span className="font-medium">{selectedFile.name}</span> (
-          {Math.round(selectedFile.size / 1024)} KB)
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload Audio File</CardTitle>
+            <CardDescription>
+              {uploadCount === 0
+                ? "Upload your first audio file to see the initial SOAP notes"
+                : uploadCount === 1
+                  ? "Upload a second audio file to see different SOAP notes"
+                  : "Upload another audio file to toggle between SOAP notes examples"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md border-muted-foreground/25 px-4">
+                <label
+                  htmlFor="audio-file"
+                  className="flex flex-col items-center justify-center w-full h-full cursor-pointer"
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-muted-foreground">MP3, WAV, M4A, or WEBM (max. 30MB)</p>
+                  </div>
+                  <input
+                    id="audio-file"
+                    type="file"
+                    className="hidden"
+                    accept="audio/*"
+                    onChange={handleFileChange}
+                    ref={fileInputRef}
+                  />
+                </label>
+              </div>
 
-      {isUploading && (
-        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-2">
-          <div
-            className="bg-primary h-2.5 rounded-full transition-all duration-300 ease-in-out"
-            style={{ width: `${uploadProgress}%` }}
-          ></div>
-          <p className="text-xs text-muted-foreground mt-1 text-center">Processing: {Math.round(uploadProgress)}%</p>
-        </div>
-      )}
+              {selectedFile && (
+                <div className="text-sm">
+                  Selected file: <span className="font-medium">{selectedFile.name}</span> (
+                  {Math.round(selectedFile.size / 1024)} KB)
+                </div>
+              )}
 
-      <Button onClick={handleUpload} disabled={!selectedFile || isUploading} className="gap-2">
-        {isUploading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          <>
-            <Upload className="h-4 w-4" />
-            Upload and Transcribe
-          </>
-        )}
-      </Button>
+              {isUploading && (
+                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-2">
+                  <div
+                    className="bg-primary h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                  <p className="text-xs text-muted-foreground mt-1 text-center">
+                    Processing: {Math.round(uploadProgress)}%
+                  </p>
+                </div>
+              )}
+
+              <Button onClick={handleUpload} disabled={!selectedFile || isUploading} className="gap-2">
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    Upload and Transcribe
+                  </>
+                )}
+              </Button>
+
+              <div className="text-sm text-muted-foreground mt-2">
+                <p className="font-medium">Demo Instructions:</p>
+                <ol className="list-decimal list-inside mt-1 space-y-1">
+                  <li>Select any audio file to simulate an upload</li>
+                  <li>Click "Upload and Transcribe" to process</li>
+                  <li>The first upload will show a headache consultation</li>
+                  <li>The second upload will show a back pain consultation</li>
+                  <li>Subsequent uploads will alternate between the two</li>
+                </ol>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>SOAP Notes</CardTitle>
+            <CardDescription>
+              {uploadCount === 0
+                ? "Your transcribed consultation will appear here in SOAP format"
+                : uploadCount % 2 === 1
+                  ? "Headache Consultation SOAP Notes"
+                  : "Back Pain Consultation SOAP Notes"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SoapNotesDisplay soapNotes={soapNotes} isLoading={isUploading} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {transcript && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Transcript</CardTitle>
+            <CardDescription>Raw transcript of your audio recording</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border p-4 max-h-[200px] overflow-y-auto">
+              <p className="text-sm whitespace-pre-line">{transcript}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -467,9 +467,7 @@ export default function PatientPage() {
                               <span>{appointment.time}</span>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm">
-                            Reschedule
-                          </Button>
+                          <div className="text-xs text-muted-foreground italic">Appointment scheduling coming soon</div>
                         </div>
                       ))}
                     </div>
@@ -497,9 +495,7 @@ export default function PatientPage() {
                               <span>{appointment.time}</span>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm">
-                            View Notes
-                          </Button>
+                          <div className="text-xs text-muted-foreground italic">Notes feature coming soon</div>
                         </div>
                       ))}
                     </div>
