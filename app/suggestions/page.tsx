@@ -302,9 +302,9 @@ export default function SuggestionsPage() {
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
             >
-              <option value="John Doe">John Doe</option>
-              <option value="Sarah Smith">Sarah Smith</option>
-              <option value="Michael Johnson">Michael Johnson</option>
+              <option value="Ramesh Kumar">Ramesh Kumar</option>
+              <option value="Ramana Vinayak">Ramana Vinayak</option>
+              <option value="Keerthi Balaji">Keerthi Balaji</option>
             </select>
           </div>
         </div>

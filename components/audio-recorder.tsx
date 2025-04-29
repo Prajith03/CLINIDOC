@@ -200,8 +200,8 @@ export function AudioRecorder({ onTranscriptionComplete, onStartTranscription }:
         return
       }
 
-      // Simulate a 10-second processing time (reduced from 30 for demo)
-      await new Promise((resolve) => setTimeout(resolve, 10000))
+      // Simulate a 40-second processing time
+      await new Promise((resolve) => setTimeout(resolve, 40000))
 
       // Determine which sample to use based on recording count
       const currentRecordingCount = recordingCount + 1

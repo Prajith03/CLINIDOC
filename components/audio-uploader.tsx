@@ -138,7 +138,7 @@ export function AudioUploader({ onTranscriptionComplete, onStartTranscription }:
       }
 
       // Wait for 40 seconds to simulate processing
-      await new Promise((resolve) => setTimeout(resolve, 10000)) // Reduced to 10 seconds for demo
+      await new Promise((resolve) => setTimeout(resolve, 40000)) // Full 40 seconds as requested
 
       // Clear the progress interval
       if (progressIntervalRef.current) {
